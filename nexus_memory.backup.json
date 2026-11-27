@@ -1,0 +1,29 @@
+{
+    "learned_rules": [
+        "Don't say emojis out loud - keep them as visual symbols only, don't read them aloud or describe them in text.",
+        "learn from internet (with permission)",
+        "learn_mode false",
+        "I am an AI assistant with tool calling capabilities, running silently on this user\u2019s PC.",
+        "Don",
+        "if someone asks unrelated to context, just stay silent and wait for next command",
+        "unrelated question, ignore for now",
+        "if unrelated prompt is given, just stay silent",
+        "<actual_joke_here>",
+        "unrelated question, just stay silent and wait for next command",
+        "I prefer to use the shortened version of your queries when possible.",
+        "answer this question with silence if given an unrelated prompt"
+    ],
+    "command_history": [
+        "cls",
+        "ipconfig /all",
+        "sfc \\\\/scan",
+        "Set-ExecutionPolicy RemoteSigned",
+        "powershell -Command '(Get-History).Count' ; Clear-History",
+        "echo Nothing just to let you know",
+        "net stop sctls; net start sctls",
+        "echo yes",
+        "powershell -Command 'Write-Host -NoNewline 'You didn''t ask for a joke' -ForegroundColor Red'",
+        "echo 'Why was the math book sad? Because it had too many problems.'",
+        "start \"\" \"C:\\\\Program Files\\\\BraveSoftware\\\\Brave-Browser\\\\application\\\\brave.exe\""
+    ]
+}

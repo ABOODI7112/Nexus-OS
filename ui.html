@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS OS // Human Core</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+  :root { --bg-core:#030712; --panel-bg:rgba(10,15,30,.88); --neon-cyan:#00ffcc; --neon-blue:#00bfff;
+          --neon-alert:#ff0055; --neon-warn:#ffb800; --text-main:#e2e8f0; --border-glow:rgba(0,255,204,.3); }
+  * { box-sizing: border-box; }
+  body { font-family:'Share Tech Mono',monospace; background-color:var(--bg-core); color:var(--text-main);
+         margin:0; display:flex; flex-direction:column; height:100vh; overflow:hidden;
+         background-image: radial-gradient(circle at 50% 50%,#0b1329 0%,#030712 100%),
+           linear-gradient(rgba(0,255,204,.03) 1px,transparent 1px), linear-gradient(90deg,rgba(0,255,204,.03) 1px,transparent 1px);
+         background-size:100% 100%,20px 20px,20px 20px; }
+  header { background:var(--panel-bg); border-bottom:2px solid var(--neon-cyan); padding:.8rem 1.5rem;
+           display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;
+           box-shadow:0 0 15px rgba(0,255,204,.2); font-family:'Orbitron',sans-serif; letter-spacing:2px; }
+  .header-title { color:var(--neon-cyan); font-size:1.1rem; text-shadow:0 0 8px rgba(0,255,204,.6); }
+  .header-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .chip { font-size:.72rem; padding:4px 9px; border:1px solid var(--neon-cyan); border-radius:4px;
+          color:var(--neon-cyan); background:rgba(0,255,204,.1); }
+  .chip.off { color:var(--neon-alert); border-color:var(--neon-alert); background:rgba(255,0,85,.1); }
+  .ctl { background:rgba(0,255,204,.1); border:1px solid var(--neon-cyan); color:var(--neon-cyan); padding:4px 10px;
+         border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; height:auto; font-weight:normal; }
+  .ctl.muted { background:rgba(255,0,85,.2); border-color:var(--neon-alert); color:var(--neon-alert); }
+  #hint { display:none; background:rgba(255,184,0,.12); border-bottom:1px solid var(--neon-warn); color:var(--neon-warn);
+          padding:.5rem 1.5rem; font-size:.85rem; }
+  #chat-container { flex:1; overflow-y:auto; padding:2rem; display:flex; flex-direction:column; gap:1.2rem;
+                    max-width:900px; width:100%; margin:0 auto; }
+  .message { padding:1rem 1.2rem; border-radius:6px; max-width:82%; line-height:1.6; word-wrap:break-word;
+             font-size:1.05rem; white-space:pre-wrap; }
+  .user-message { background:rgba(0,191,255,.15); border:1px solid var(--neon-blue); color:#fff; align-self:flex-end; }
+  .ai-message { background:var(--panel-bg); border:1px solid var(--border-glow); align-self:flex-start; }
+  .err { color:var(--neon-alert); }
+  .gen-img { display:block; max-width:100%; border-radius:6px; margin-top:.8rem; border:1px solid var(--border-glow); }
+  .sources { font-size:.75rem; opacity:.6; margin-top:.6rem; }
+  .approval { border-color:var(--neon-warn); }
+  .approval code { display:block; margin:.5rem 0; padding:.5rem; background:#010409; color:var(--neon-warn); white-space:pre-wrap; }
+  .approval button { height:34px; margin-right:8px; }
+  .approval .deny { background:rgba(255,0,85,.25); color:var(--neon-alert); border:1px solid var(--neon-alert); }
+  #input-container { background:var(--panel-bg); padding:1rem 2rem; border-top:2px solid var(--neon-cyan); display:flex; gap:.7rem;
+                     max-width:900px; width:100%; margin:0 auto; align-items:center; }
+  #prompt-input { flex:1; padding:.9rem 1.2rem; border-radius:4px; border:1px solid var(--neon-cyan); background:rgba(3,7,18,.9);
+                  color:var(--neon-cyan); font-family:'Share Tech Mono',monospace; font-size:1.1rem; outline:none; min-width:0; }
+  button { background:linear-gradient(135deg,#00ffcc,#00bfff); color:#030712; border:none; padding:0 1.2rem; height:48px;
+           border-radius:4px; font-family:'Orbitron',sans-serif; font-weight:bold; cursor:pointer; }
+  #mic-btn { background:rgba(255,0,85,.2); border:1px solid var(--neon-alert); color:var(--neon-alert); padding:0 .9rem; }
+  #mic-btn.listening { background:var(--neon-alert); color:#fff; box-shadow:0 0 15px var(--neon-alert); }
+  .file-label { background:rgba(0,191,255,.2); border:1px solid var(--neon-blue); color:var(--neon-blue); padding:0 .8rem; height:48px;
+                display:flex; align-items:center; border-radius:4px; cursor:pointer; font-family:'Orbitron',sans-serif; font-size:.75rem; white-space:nowrap; }
+  .file-label.on { border-color:var(--neon-cyan); color:var(--neon-cyan); }
+  input[type=file] { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-title">⚡ NEXUS OS // HUMAN CORE</div>
+  <div class="header-controls">
+    <span class="chip off" id="chip-llm">LLM</span>
+    <span class="chip off" id="chip-img">IMAGES</span>
+    <span class="chip" id="chip-kb">LIBRARY 0</span>
+    <button class="ctl" onclick="newChat()">NEW CHAT</button>
+    <button id="mute-toggle" class="ctl" onclick="toggleMute()">🔊 SOUND: ON</button>
+    <span class="chip" id="wake-status">● LISTENING FOR "HEY NEXUS"</span>
+  </div>
+</header>
+<div id="hint"></div>
+<div id="chat-container"></div>
+<div id="input-container">
+  <label class="file-label" id="img-label" for="file-input">📁 IMG</label>
+  <input type="file" id="file-input" accept="image/*">
+  <label class="file-label" id="learn-label" for="learn-input" title="Teach NEXUS a text document">📚 LEARN</label>
+  <input type="file" id="learn-input" accept=".txt,.md,.csv,.json,.py,.js,.html,.log,text/*">
+  <input type="text" id="prompt-input" placeholder="Type, or say 'Hey Nexus'..." autofocus>
+  <button id="mic-btn" onclick="toggleVoice()">🎙️</button>
+  <button onclick="sendMessage()">SEND</button>
+</div>
+<script>
+const API_KEY = "__API_KEY__";
+const SESSION_ID = localStorage.getItem("nexus_session") || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+localStorage.setItem("nexus_session", SESSION_ID);
+
+const chat = document.getElementById("chat-container");
+const inputField = document.getElementById("prompt-input");
+inputField.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
+
+function addMessage(role, text, extraClass) {
+  const div = document.createElement("div");
+  div.className = "message " + (role === "user" ? "user-message" : "ai-message") + (extraClass ? " " + extraClass : "");
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+addMessage("ai", 'Hey! I\'m Nexus. Say "Hey Nexus", or just type. I can open stuff, search the web, draw images, and learn from documents you give me.');
+
+// ---------- voice out ----------
+let isMuted = false, isSpeaking = false, selectedVoice = null;
+function toggleMute() {
+  isMuted = !isMuted;
+  const b = document.getElementById("mute-toggle");
+  b.className = "ctl" + (isMuted ? " muted" : "");
+  b.innerText = isMuted ? "🔇 SOUND: OFF" : "🔊 SOUND: ON";
+  if (isMuted) speechSynthesis.cancel();
+}
+function loadVoices() {
+  const v = speechSynthesis.getVoices();
+  selectedVoice = v.find(x => /Female|Zira|Samantha|Victoria|Google US English|Aria/.test(x.name)) || v[0] || null;
+}
+if ("speechSynthesis" in window) { speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); }
+function speakable(text) {
+  return text.replace(/https?:\/\/\S+/g, " link ")
+             .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, "")   // never read emojis aloud
+             .replace(/[*_`#>]/g, "").trim();
+}
+function speakText(text) {
+  const clean = speakable(text);
+  if (isMuted || !clean || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(clean);
+  u.rate = 1.05; u.pitch = 1.1;
+  if (selectedVoice) u.voice = selectedVoice;
+  u.onstart = () => { isSpeaking = true; };           // ignore the mic while NEXUS talks
+  u.onend = u.onerror = () => { setTimeout(() => { isSpeaking = false; }, 400); };
+  speechSynthesis.speak(u);
+}
+
+// ---------- voice in ----------
+let recognition, isListening = false;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = false;                  // only finished sentences, no repeat-sends
+  recognition.onresult = event => {
+    if (isSpeaking) return;
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (!event.results[i].isFinal) continue;
+      const heard = event.results[i][0].transcript.toLowerCase();
+      if (!heard.includes("nexus")) continue;
+      const command = heard.replace(/hey,? nexus|nexus/g, "").trim();
+      if (command.length > 2) { inputField.value = command; sendMessage(); }
+      else speakText("Yeah? I'm listening.");
+    }
+  };
+  recognition.onerror = () => { if (isListening) setTimeout(() => { try { recognition.start(); } catch (e) {} }, 1000); };
+  recognition.onend = () => { if (isListening) { try { recognition.start(); } catch (e) {} } };
+}
+function setWake(text) { document.getElementById("wake-status").innerText = text; }
+function toggleVoice() {
+  if (!recognition) { alert("Speech recognition isn't supported here. Use Chrome or Edge."); return; }
+  const mic = document.getElementById("mic-btn");
+  if (!isListening) {
+    try { recognition.start(); } catch (e) {}
+    isListening = true; mic.classList.add("listening"); setWake("● LISTENING FOR 'HEY NEXUS'");
+  } else {
+    isListening = false; recognition.stop(); mic.classList.remove("listening"); setWake("● MIC PAUSED");
+  }
+}
+window.addEventListener("load", () => setTimeout(() => { if (recognition && !isListening) toggleVoice(); }, 1000));
+
+// ---------- API helper ----------
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ "X-API-Key": API_KEY }, opts.headers || {});
+  const res = await fetch(path, opts);
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.detail || ("HTTP " + res.status));
+  return data;
+}
+
+// ---------- status ----------
+async function refreshStatus() {
+  try {
+    const s = await api("/status");
+    document.getElementById("chip-llm").className = "chip" + (s.llm ? "" : " off");
+    document.getElementById("chip-img").className = "chip" + (s.image ? "" : " off");
+    document.getElementById("chip-kb").innerText = "LIBRARY " + s.chunks;
+    const hint = document.getElementById("hint");
+    const notes = [];
+    if (!s.llm) notes.push("Ollama isn't reachable. Start it first.");
+    if (s.missing_models.length) notes.push("Missing models, run: " + s.missing_models.map(m => "ollama pull " + m).join("  |  "));
+    if (!s.image) notes.push("Image generation is off: start Stable Diffusion WebUI/Forge with --api.");
+    hint.style.display = notes.length ? "block" : "none";
+    hint.textContent = notes.join("   •   ");
+  } catch (e) {}
+}
+refreshStatus();
+
+// ---------- files ----------
+let selectedFile = null;
+document.getElementById("file-input").addEventListener("change", e => {
+  selectedFile = e.target.files[0] || null;
+  const l = document.getElementById("img-label");
+  l.classList.toggle("on", !!selectedFile);
+  l.innerText = selectedFile ? "📁 ATTACHED" : "📁 IMG";
+});
+document.getElementById("learn-input").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  const note = addMessage("ai", "Reading " + f.name + " ...");
+  try {
+    const fd = new FormData(); fd.append("file", f);
+    const r = await api("/knowledge", { method: "POST", body: fd });
+    note.textContent = "Learned " + f.name + " (" + r.chunks + " chunks). Ask me about it anytime.";
+    refreshStatus();
+  } catch (err) { note.textContent = "Couldn't learn that: " + err.message; note.classList.add("err"); }
+});
+
+// ---------- approvals ----------
+const shownApprovals = new Set();
+function showApprovals(list) {
+  (list || []).forEach(p => {
+    if (shownApprovals.has(p.id)) return;
+    shownApprovals.add(p.id);
+    const card = addMessage("ai", "I need your OK before I run this:", "approval");
+    const code = document.createElement("code"); code.textContent = p.summary; card.appendChild(code);
+    const mk = (label, path, cls) => {
+      const b = document.createElement("button"); b.textContent = label; if (cls) b.className = cls;
+      b.onclick = async () => {
+        card.querySelectorAll("button").forEach(x => x.disabled = true);
+        try { const r = await api(path + "/" + p.id, { method: "POST" }); addMessage("ai", r.result); }
+        catch (err) { addMessage("ai", err.message, "err"); }
+      };
+      return b;
+    };
+    card.appendChild(mk("APPROVE", "/approve")); card.appendChild(mk("DENY", "/deny", "deny"));
+  });
+}
+
+// ---------- send ----------
+async function sendMessage() {
+  const text = inputField.value.trim();
+  if (!text && !selectedFile) return;
+  addMessage("user", "> " + text + (selectedFile ? " [Attached Image: " + selectedFile.name + "]" : ""));
+  inputField.value = "";
+  const loading = addMessage("ai", "thinking...");
+  try {
+    const fd = new FormData();
+    fd.append("prompt", text || "Analyze this image.");
+    fd.append("session_id", SESSION_ID);
+    if (selectedFile) fd.append("file", selectedFile);
+    selectedFile = null;
+    document.getElementById("file-input").value = "";
+    const l = document.getElementById("img-label"); l.classList.remove("on"); l.innerText = "📁 IMG";
+
+    const data = await api("/ai-agent", { method: "POST", body: fd });
+    loading.remove();
+    const msg = addMessage("ai", data.ai_response);
+    (data.images || []).forEach(url => {
+      const img = document.createElement("img"); img.className = "gen-img"; img.src = url; img.alt = "generated image";
+      img.onload = () => { chat.scrollTop = chat.scrollHeight; };
+      msg.appendChild(img);
+    });
+    if (data.sources && data.sources.length) {
+      const s = document.createElement("div"); s.className = "sources"; s.textContent = "from library: " + data.sources.join(", "); msg.appendChild(s);
+    }
+    showApprovals(data.pending);
+    speakText(data.ai_response);
+  } catch (err) {
+    loading.textContent = "rip: " + err.message; loading.classList.add("err");
+  }
+  refreshStatus();
+}
+
+async function newChat() {
+  const fd = new FormData(); fd.append("session_id", SESSION_ID);
+  try { await api("/new-chat", { method: "POST", body: fd }); } catch (e) {}
+  chat.innerHTML = ""; addMessage("ai", "Fresh start. What's up?");
+}
+</script>
+</body>
+</html>
